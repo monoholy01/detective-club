@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -62,6 +61,7 @@
     <div id="hostClueContainer" class="hidden">
       <button onclick="document.getElementById('hostClue').classList.toggle('hidden')">🔓 Show/Hide Clue</button>
       <div id="hostClue" class="hidden" style="margin-top: 10px; font-size: 1.2em;"></div>
+      <button onclick="resetGame()" style="margin-top: 20px; background-color: #d64545;">🔄 Start New Round</button>
     </div>
   </div>
 
@@ -97,6 +97,14 @@
       document.getElementById('hostClueContainer').classList.remove('hidden');
       document.getElementById('hostClue').innerText = decodeURIComponent(clue);
       document.getElementById('clueInputSection').classList.add('hidden');
+    }
+
+    function resetGame() {
+      document.getElementById('secretClue').value = '';
+      document.getElementById('clueInputSection').classList.remove('hidden');
+      document.getElementById('qrCode').innerHTML = '';
+      document.getElementById('hostClueContainer').classList.add('hidden');
+      document.getElementById('hostClue').classList.add('hidden');
     }
 
     function getParams() {
