@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Detective Club - Host</title>
+  <script type="module" src="firebase.js"></script>
+</head>
+<body>
+  <h2>Create & Host Game</h2>
+  <input id="roomCode" placeholder="Room Code" />
+  <button id="createBtn">Create Room</button>
+  <div id="players"></div>
+  <input id="clueInput" placeholder="Enter clue word" />
+  <button id="startRoundBtn">Start Round</button>
+  <script type="module">
+    import { createRoom, observePlayers, startRound } from './firebase.js';
+    document.getElementById("createBtn").onclick = () => {
+      const room = document.getElementById("roomCode").value.trim();
+      createRoom(room);
+      observePlayers(room, players => {
+        document.getElementById("players").innerHTML = 
+          "<h3>Players:</h3><ul>" + players.map(p => `<li>${p}</li>`).join('') + "</ul>";
+      });
+    };
+    document.getElementById("startRoundBtn").onclick = () => {
+      const room = document.getElementById("roomCode").value.trim();
+      const clue = document.getElementById("clueInput").value.trim();
+      startRound(room, clue);
+    };
+  </script>
+</body>
+</html>
