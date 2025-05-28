@@ -2,14 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Detective Club - QR Generator</title>
+  <title>🕵️ Detective Club - QR Clue Generator</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
-      color: #102a43;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       text-align: center;
       padding: 30px;
+      background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+      color: #102a43;
+    }
+    h1 {
+      color: #334e68;
+      margin-bottom: 20px;
+    }
+    input, button, select {
+      padding: 12px;
+      margin: 10px;
+      font-size: 1em;
+      border: 2px solid #bcccdc;
+      border-radius: 8px;
+      width: 250px;
+      box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    }
+    button {
+      background-color: #486581;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #334e68;
+    }
+    #qrCode canvas {
+      margin-top: 20px;
     }
     .card {
       background: white;
@@ -19,70 +44,56 @@
       margin: 20px auto;
       max-width: 500px;
     }
-    input, button, select {
-      padding: 12px;
-      margin: 10px;
-      font-size: 1em;
-      border: 2px solid #bcccdc;
-      border-radius: 8px;
-      width: 250px;
+    .hidden {
+      display: none;
     }
-    button {
-      background-color: #486581;
-      color: white;
-      cursor: pointer;
-    }
-    .hidden { display: none; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body>
-  <div class="card" id="homeScreen">
-    <h1>🕵️ Detective Club</h1>
-    <button onclick="showHostSetup()">🎲 I'm the clue giver</button>
-    <button onclick="reloadPage()">👀 I'm a player</button>
-  </div>
-
-  <div class="card hidden" id="setup">
-    <h2>Enter clue and players</h2>
+  <div class="card" id="setup">
+    <h1>🕵️ Detective Club QR Generator</h1>
+    <p>Enter number of players and secret clue</p>
     <input type="number" id="playerCount" placeholder="Number of players" min="3" max="20"><br>
     <input type="text" id="secretClue" placeholder="Secret clue"><br>
     <button onclick="generateGameLink()">Generate Game QR</button>
     <div id="qrCode"></div>
+    <div id="hostClueContainer" class="hidden">
+      <button onclick="document.getElementById('hostClue').classList.toggle('hidden')">🔓 Show/Hide Clue</button>
+      <div id="hostClue" class="hidden" style="margin-top: 10px; font-size: 1.2em;"></div>
+    </div>
   </div>
 
   <div class="card hidden" id="playerCheck">
     <h2>You're joining a game!</h2>
+    <label for="playerSelect">Select your player number:</label><br>
     <select id="playerSelect"></select><br>
     <button onclick="revealClue()">Reveal Clue</button>
     <div id="clueResult"></div>
   </div>
 
   <script>
-    function showHostSetup() {
-      document.getElementById('homeScreen').classList.add('hidden');
-      document.getElementById('setup').classList.remove('hidden');
-    }
-
-    function reloadPage() {
-      location.href = location.origin + location.pathname;
-    }
-
     function generateGameLink() {
       const count = parseInt(document.getElementById('playerCount').value);
       const clue = encodeURIComponent(document.getElementById('secretClue').value.trim());
+
       if (!count || count < 3 || !clue) {
-        alert('Enter valid player count and clue.');
+        alert('Please enter valid number of players (min 3) and a clue.');
         return;
       }
+
       const noClueIndex = Math.floor(Math.random() * count);
       const url = `${location.href.split("?")[0]}?clue=${clue}&count=${count}&noClue=${noClueIndex}`;
+
       const qrContainer = document.getElementById('qrCode');
       qrContainer.innerHTML = '';
       QRCode.toCanvas(document.createElement('canvas'), url, function (err, canvas) {
         if (err) console.error(err);
         qrContainer.appendChild(canvas);
       });
+
+      document.getElementById('hostClueContainer').classList.remove('hidden');
+      document.getElementById('hostClue').innerText = decodeURIComponent(clue);
     }
 
     function getParams() {
@@ -98,6 +109,7 @@
       const selected = parseInt(document.getElementById('playerSelect').value);
       const { clue, noClue } = getParams();
       const result = document.getElementById('clueResult');
+
       if (selected === noClue) {
         result.innerHTML = '<h3>😶 You did NOT receive the clue!</h3>';
       } else {
@@ -108,8 +120,9 @@
     window.onload = function () {
       const params = new URLSearchParams(window.location.search);
       if (params.has('clue') && params.has('count') && params.has('noClue')) {
-        document.getElementById('homeScreen').classList.add('hidden');
+        document.getElementById('setup').classList.add('hidden');
         document.getElementById('playerCheck').classList.remove('hidden');
+
         const { count } = getParams();
         const select = document.getElementById('playerSelect');
         for (let i = 0; i < count; i++) {
