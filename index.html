@@ -3,39 +3,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>🕵️ Detective Club - QR Clue Generator</title>
+  <title>🕵️ Detective Club QR Generator</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      text-align: center;
-      padding: 30px;
-      background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f0f4f8;
       color: #102a43;
+      text-align: center;
+      padding: 40px;
     }
     h1 {
       color: #334e68;
-      margin-bottom: 20px;
     }
     input, button, select {
       padding: 12px;
-      margin: 10px;
+      margin: 8px;
       font-size: 1em;
       border: 2px solid #bcccdc;
       border-radius: 8px;
       width: 250px;
-      box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
     }
     button {
       background-color: #486581;
       color: white;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: background 0.3s;
     }
     button:hover {
       background-color: #334e68;
-    }
-    #qrCode canvas {
-      margin-top: 20px;
     }
     .card {
       background: white;
@@ -48,6 +43,9 @@
     .hidden {
       display: none;
     }
+    #qrCode canvas {
+      margin-top: 20px;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
@@ -56,7 +54,9 @@
     <h1>🕵️ Detective Club QR Generator</h1>
     <p>Enter number of players and secret clue</p>
     <input type="number" id="playerCount" placeholder="Number of players" min="3" max="20"><br>
-    <input type="text" id="secretClue" placeholder="Secret clue"><br>
+    <div id="clueInputSection">
+      <input type="text" id="secretClue" placeholder="Secret clue"><br>
+    </div>
     <button onclick="generateGameLink()">Generate Game QR</button>
     <div id="qrCode"></div>
     <div id="hostClueContainer" class="hidden">
@@ -76,7 +76,8 @@
   <script>
     function generateGameLink() {
       const count = parseInt(document.getElementById('playerCount').value);
-      const clue = encodeURIComponent(document.getElementById('secretClue').value.trim());
+      const clueBox = document.getElementById('secretClue');
+      const clue = encodeURIComponent(clueBox.value.trim());
 
       if (!count || count < 3 || !clue) {
         alert('Please enter valid number of players (min 3) and a clue.');
@@ -95,6 +96,7 @@
 
       document.getElementById('hostClueContainer').classList.remove('hidden');
       document.getElementById('hostClue').innerText = decodeURIComponent(clue);
+      document.getElementById('clueInputSection').classList.add('hidden');
     }
 
     function getParams() {
