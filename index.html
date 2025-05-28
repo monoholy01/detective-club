@@ -1,92 +1,157 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Detective Club QR Clue - Self Assign</title>
+  <title>Detective Club - QR Clue Game V2</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
     input, button, select { padding: 10px; margin: 10px; font-size: 1em; }
     .hidden { display: none; }
+    #clueResult { margin-top: 20px; font-size: 1.2em; font-weight: bold; }
+    #historyList { margin-top: 20px; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body>
-  <h1>Detective Club QR Generator</h1>
+  <h1>Detective Club V2</h1>
   <div id="setup">
-    <p>Enter number of players and secret clue</p>
+    <p><b>Session Setup</b></p>
     <input type="number" id="playerCount" placeholder="Number of players" min="3" max="20">
-    <input type="text" id="secretClue" placeholder="Secret clue">
-    <button onclick="generateGameLink()">Generate Game QR</button>
-    <div id="qrCode"></div>
+    <button onclick="initSession()">Start Game</button>
   </div>
 
-  <div id="playerCheck" class="hidden">
-    <h2>You're joining a game!</h2>
-    <label for="playerSelect">Select your player number:</label>
+  <div id="clueInput" class="hidden">
+    <p><b>Current Clue Giver: <span id="giverDisplay"></span></b></p>
+    <input type="text" id="clueWord" placeholder="Enter clue">
+    <button onclick="startNewRound()">Start New Round</button>
+    <div id="qrContainer"></div>
+  </div>
+
+  <div id="joinSection" class="hidden">
+    <p>Select your player number</p>
     <select id="playerSelect"></select>
-    <button onclick="revealClue()">Reveal Clue</button>
+    <button onclick="seeClue()">See Clue</button>
     <div id="clueResult"></div>
+    <div id="historyList"></div>
   </div>
 
   <script>
-    function generateGameLink() {
-      const count = parseInt(document.getElementById('playerCount').value);
-      const clue = encodeURIComponent(document.getElementById('secretClue').value.trim());
+    let sessionData = {
+      sessionId: Date.now(),
+      players: 0,
+      clueHistory: [],
+      round: 0,
+      clueGiver: 0,
+      clue: "",
+      noCluePlayer: 0
+    };
 
-      if (!count || count < 3 || !clue) {
-        alert('Please enter valid number of players (min 3) and a clue.');
+    function initSession() {
+      const count = parseInt(document.getElementById("playerCount").value);
+      if (!count || count < 3) {
+        alert("Need at least 3 players.");
         return;
       }
+      sessionData.players = count;
+      document.getElementById("setup").classList.add("hidden");
+      document.getElementById("clueInput").classList.remove("hidden");
+      updateGiverDisplay();
+    }
 
-      const noClueIndex = Math.floor(Math.random() * count);
-      const url = `${location.href.split("?")[0]}?clue=${clue}&count=${count}&noClue=${noClueIndex}`;
+    function updateGiverDisplay() {
+      document.getElementById("giverDisplay").textContent = "Player " + (sessionData.clueGiver + 1);
+    }
 
-      const qrContainer = document.getElementById('qrCode');
-      qrContainer.innerHTML = '';
-      QRCode.toCanvas(document.createElement('canvas'), url, function (err, canvas) {
+    function startNewRound() {
+      const clue = document.getElementById("clueWord").value.trim();
+      if (!clue) {
+        alert("Please enter a clue.");
+        return;
+      }
+      sessionData.round++;
+      sessionData.clue = clue;
+      sessionData.clueHistory.push(clue);
+      sessionData.noCluePlayer = getRandomExcept(sessionData.players, sessionData.clueGiver);
+
+      const baseURL = location.href.split("?")[0];
+      const url = `${baseURL}?s=${sessionData.sessionId}&r=${sessionData.round}&c=${encodeURIComponent(clue)}&ncp=${sessionData.noCluePlayer}`;
+
+      const qrContainer = document.getElementById("qrContainer");
+      qrContainer.innerHTML = "";
+      QRCode.toCanvas(document.createElement("canvas"), url, function (err, canvas) {
         if (err) console.error(err);
         qrContainer.appendChild(canvas);
       });
+
+      sessionData.clueGiver = (sessionData.clueGiver + 1) % sessionData.players;
+      updateGiverDisplay();
+      document.getElementById("clueWord").value = "";
+    }
+
+    function getRandomExcept(max, except) {
+      let result;
+      do {
+        result = Math.floor(Math.random() * max);
+      } while (result === except);
+      return result;
     }
 
     function getParams() {
       const params = new URLSearchParams(window.location.search);
       return {
-        clue: decodeURIComponent(params.get('clue') || ''),
-        count: parseInt(params.get('count')),
-        noClue: parseInt(params.get('noClue'))
+        sessionId: params.get("s"),
+        round: parseInt(params.get("r")),
+        clue: decodeURIComponent(params.get("c")),
+        noCluePlayer: parseInt(params.get("ncp"))
       };
     }
 
-    function revealClue() {
-      const selected = parseInt(document.getElementById('playerSelect').value);
-      const { clue, noClue } = getParams();
-      const result = document.getElementById('clueResult');
+    function seeClue() {
+      const playerId = parseInt(document.getElementById("playerSelect").value);
+      const { clue, noCluePlayer } = getParams();
+      const resultBox = document.getElementById("clueResult");
 
-      if (selected === noClue) {
-        result.innerHTML = '<h3>You did NOT receive the clue!</h3>';
+      if (playerId === noCluePlayer) {
+        resultBox.textContent = "❌ You did NOT receive the clue!";
       } else {
-        result.innerHTML = `<h3>Clue: ${clue}</h3>`;
+        resultBox.textContent = "✅ Your clue is: " + clue;
+      }
+
+      const history = sessionStorage.getItem("clueHistory");
+      if (history) {
+        const clues = JSON.parse(history);
+        document.getElementById("historyList").innerHTML = "<h4>Past Clues:</h4><ul>" + clues.map(c => `<li>${c}</li>`).join("") + "</ul>";
       }
     }
 
     window.onload = function () {
       const params = new URLSearchParams(window.location.search);
-      if (params.has('clue') && params.has('count') && params.has('noClue')) {
-        document.getElementById('setup').classList.add('hidden');
-        document.getElementById('playerCheck').classList.remove('hidden');
+      if (params.has("s") && params.has("r") && params.has("c") && params.has("ncp")) {
+        document.getElementById("setup").classList.add("hidden");
+        document.getElementById("joinSection").classList.remove("hidden");
 
-        const { count } = getParams();
-        const select = document.getElementById('playerSelect');
-        for (let i = 0; i < count; i++) {
-          const option = document.createElement('option');
-          option.value = i;
-          option.text = `Player ${i + 1}`;
-          select.appendChild(option);
+        const select = document.getElementById("playerSelect");
+        const totalPlayers = 20;
+        for (let i = 0; i < totalPlayers; i++) {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = "Player " + (i + 1);
+          select.appendChild(opt);
+        }
+
+        const sessionId = params.get("s");
+        const history = sessionStorage.getItem("clueHistory");
+        if (history) {
+          const historyArr = JSON.parse(history);
+          if (!historyArr.includes(params.get("c"))) {
+            historyArr.push(params.get("c"));
+            sessionStorage.setItem("clueHistory", JSON.stringify(historyArr));
+          }
+        } else {
+          sessionStorage.setItem("clueHistory", JSON.stringify([params.get("c")]));
         }
       }
-    }
+    };
   </script>
 </body>
 </html>
