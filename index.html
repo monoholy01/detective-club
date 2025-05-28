@@ -1,156 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Detective Club - QR Clue Game V2</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-    input, button, select { padding: 10px; margin: 10px; font-size: 1em; }
-    .hidden { display: none; }
-    #clueResult { margin-top: 20px; font-size: 1.2em; font-weight: bold; }
-    #historyList { margin-top: 20px; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto; }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <title>Detective Club - Join Room</title>
+  <script type="module" src="firebase.js"></script>
 </head>
 <body>
-  <h1>Detective Club V2</h1>
-  <div id="setup">
-    <p><b>Session Setup</b></p>
-    <input type="number" id="playerCount" placeholder="Number of players" min="3" max="20">
-    <button onclick="initSession()">Start Game</button>
-  </div>
-
-  <div id="clueInput" class="hidden">
-    <p><b>Current Clue Giver: <span id="giverDisplay"></span></b></p>
-    <input type="text" id="clueWord" placeholder="Enter clue">
-    <button onclick="startNewRound()">Start New Round</button>
-    <div id="qrContainer"></div>
-  </div>
-
-  <div id="joinSection" class="hidden">
-    <p>Select your player number</p>
-    <select id="playerSelect"></select>
-    <button onclick="seeClue()">See Clue</button>
-    <div id="clueResult"></div>
-    <div id="historyList"></div>
-  </div>
-
-  <script>
-    let sessionData = {
-      sessionId: Date.now(),
-      players: 0,
-      clueHistory: [],
-      round: 0,
-      clueGiver: 0,
-      clue: "",
-      noCluePlayer: 0
-    };
-
-    function initSession() {
-      const count = parseInt(document.getElementById("playerCount").value);
-      if (!count || count < 3) {
-        alert("Need at least 3 players.");
-        return;
-      }
-      sessionData.players = count;
-      document.getElementById("setup").classList.add("hidden");
-      document.getElementById("clueInput").classList.remove("hidden");
-      updateGiverDisplay();
-    }
-
-    function updateGiverDisplay() {
-      document.getElementById("giverDisplay").textContent = "Player " + (sessionData.clueGiver + 1);
-    }
-
-    function startNewRound() {
-      const clue = document.getElementById("clueWord").value.trim();
-      if (!clue) {
-        alert("Please enter a clue.");
-        return;
-      }
-      sessionData.round++;
-      sessionData.clue = clue;
-      sessionData.clueHistory.push(clue);
-      sessionData.noCluePlayer = getRandomExcept(sessionData.players, sessionData.clueGiver);
-
-      const baseURL = location.href.split("?")[0];
-      const url = `${baseURL}?s=${sessionData.sessionId}&r=${sessionData.round}&c=${encodeURIComponent(clue)}&ncp=${sessionData.noCluePlayer}`;
-
-      const qrContainer = document.getElementById("qrContainer");
-      qrContainer.innerHTML = "";
-      QRCode.toCanvas(document.createElement("canvas"), url, function (err, canvas) {
-        if (err) console.error(err);
-        qrContainer.appendChild(canvas);
-      });
-
-      sessionData.clueGiver = (sessionData.clueGiver + 1) % sessionData.players;
-      updateGiverDisplay();
-      document.getElementById("clueWord").value = "";
-    }
-
-    function getRandomExcept(max, except) {
-      let result;
-      do {
-        result = Math.floor(Math.random() * max);
-      } while (result === except);
-      return result;
-    }
-
-    function getParams() {
-      const params = new URLSearchParams(window.location.search);
-      return {
-        sessionId: params.get("s"),
-        round: parseInt(params.get("r")),
-        clue: decodeURIComponent(params.get("c")),
-        noCluePlayer: parseInt(params.get("ncp"))
-      };
-    }
-
-    function seeClue() {
-      const playerId = parseInt(document.getElementById("playerSelect").value);
-      const { clue, noCluePlayer } = getParams();
-      const resultBox = document.getElementById("clueResult");
-
-      if (playerId === noCluePlayer) {
-        resultBox.textContent = "❌ You did NOT receive the clue!";
-      } else {
-        resultBox.textContent = "✅ Your clue is: " + clue;
-      }
-
-      const history = sessionStorage.getItem("clueHistory");
-      if (history) {
-        const clues = JSON.parse(history);
-        document.getElementById("historyList").innerHTML = "<h4>Past Clues:</h4><ul>" + clues.map(c => `<li>${c}</li>`).join("") + "</ul>";
-      }
-    }
-
-    window.onload = function () {
-      const params = new URLSearchParams(window.location.search);
-      if (params.has("s") && params.has("r") && params.has("c") && params.has("ncp")) {
-        document.getElementById("setup").classList.add("hidden");
-        document.getElementById("joinSection").classList.remove("hidden");
-
-        const select = document.getElementById("playerSelect");
-        const totalPlayers = 20;
-        for (let i = 0; i < totalPlayers; i++) {
-          const opt = document.createElement("option");
-          opt.value = i;
-          opt.textContent = "Player " + (i + 1);
-          select.appendChild(opt);
-        }
-
-        const sessionId = params.get("s");
-        const history = sessionStorage.getItem("clueHistory");
-        if (history) {
-          const historyArr = JSON.parse(history);
-          if (!historyArr.includes(params.get("c"))) {
-            historyArr.push(params.get("c"));
-            sessionStorage.setItem("clueHistory", JSON.stringify(historyArr));
-          }
-        } else {
-          sessionStorage.setItem("clueHistory", JSON.stringify([params.get("c")]));
-        }
-      }
+  <h2>Join Detective Club Game</h2>
+  <input id="roomCode" placeholder="Enter Room Code" />
+  <input id="playerName" placeholder="Your Name" />
+  <button id="joinBtn">Join Game</button>
+  <div id="status"></div>
+  <script type="module">
+    import { joinRoom } from './firebase.js';
+    document.getElementById("joinBtn").onclick = async () => {
+      const room = document.getElementById("roomCode").value.trim();
+      const name = document.getElementById("playerName").value.trim();
+      const res = await joinRoom(room, name);
+      document.getElementById("status").innerText = res;
     };
   </script>
 </body>
