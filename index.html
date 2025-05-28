@@ -1,24 +1,92 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Detective Club - Join Room</title>
-  <script type="module" src="firebase.js"></script>
+  <title>Detective Club QR Clue - Self Assign</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    input, button, select { padding: 10px; margin: 10px; font-size: 1em; }
+    .hidden { display: none; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body>
-  <h2>Join Detective Club Game</h2>
-  <input id="roomCode" placeholder="Enter Room Code" />
-  <input id="playerName" placeholder="Your Name" />
-  <button id="joinBtn">Join Game</button>
-  <div id="status"></div>
-  <script type="module">
-    import { joinRoom } from './firebase.js';
-    document.getElementById("joinBtn").onclick = async () => {
-      const room = document.getElementById("roomCode").value.trim();
-      const name = document.getElementById("playerName").value.trim();
-      const res = await joinRoom(room, name);
-      document.getElementById("status").innerText = res;
-    };
+  <h1>Detective Club QR Generator</h1>
+  <div id="setup">
+    <p>Enter number of players and secret clue</p>
+    <input type="number" id="playerCount" placeholder="Number of players" min="3" max="20">
+    <input type="text" id="secretClue" placeholder="Secret clue">
+    <button onclick="generateGameLink()">Generate Game QR</button>
+    <div id="qrCode"></div>
+  </div>
+
+  <div id="playerCheck" class="hidden">
+    <h2>You're joining a game!</h2>
+    <label for="playerSelect">Select your player number:</label>
+    <select id="playerSelect"></select>
+    <button onclick="revealClue()">Reveal Clue</button>
+    <div id="clueResult"></div>
+  </div>
+
+  <script>
+    function generateGameLink() {
+      const count = parseInt(document.getElementById('playerCount').value);
+      const clue = encodeURIComponent(document.getElementById('secretClue').value.trim());
+
+      if (!count || count < 3 || !clue) {
+        alert('Please enter valid number of players (min 3) and a clue.');
+        return;
+      }
+
+      const noClueIndex = Math.floor(Math.random() * count);
+      const url = `${location.href.split("?")[0]}?clue=${clue}&count=${count}&noClue=${noClueIndex}`;
+
+      const qrContainer = document.getElementById('qrCode');
+      qrContainer.innerHTML = '';
+      QRCode.toCanvas(document.createElement('canvas'), url, function (err, canvas) {
+        if (err) console.error(err);
+        qrContainer.appendChild(canvas);
+      });
+    }
+
+    function getParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        clue: decodeURIComponent(params.get('clue') || ''),
+        count: parseInt(params.get('count')),
+        noClue: parseInt(params.get('noClue'))
+      };
+    }
+
+    function revealClue() {
+      const selected = parseInt(document.getElementById('playerSelect').value);
+      const { clue, noClue } = getParams();
+      const result = document.getElementById('clueResult');
+
+      if (selected === noClue) {
+        result.innerHTML = '<h3>You did NOT receive the clue!</h3>';
+      } else {
+        result.innerHTML = `<h3>Clue: ${clue}</h3>`;
+      }
+    }
+
+    window.onload = function () {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('clue') && params.has('count') && params.has('noClue')) {
+        document.getElementById('setup').classList.add('hidden');
+        document.getElementById('playerCheck').classList.remove('hidden');
+
+        const { count } = getParams();
+        const select = document.getElementById('playerSelect');
+        for (let i = 0; i < count; i++) {
+          const option = document.createElement('option');
+          option.value = i;
+          option.text = `Player ${i + 1}`;
+          select.appendChild(option);
+        }
+      }
+    }
   </script>
 </body>
 </html>
